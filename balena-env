@@ -1,0 +1,64 @@
+#!/bin/bash
+
+function init {
+	mkdir -p $HOME/.balena-cloud
+	mkdir -p $HOME/.balena-staging
+	mkdir -p $HOME/.balena-bob
+
+	if [ -z $(current_backend) ]; then
+		echo "Setting balena backend to cloud"
+		set_backend_to "cloud"
+	fi
+}
+
+function current_backend {
+	cat $HOME/.balena-backend 2>/dev/null || echo ""
+}
+
+function backend_to_location {
+	case $1 in
+		"cloud") location="$HOME/.balena-cloud"
+		;;
+		"staging") location="$HOME/.balena-staging"
+		;;
+		"bob") location="$HOME/.balena-bob"
+		;;
+	esac
+	echo $location
+}
+
+function backend_to_url {
+	case $1 in
+		"cloud") url="balena-cloud.com"
+		;;
+		"staging") url="balena-staging.com"
+		;;
+		"bob") url="ares.local"
+		;;
+	esac
+	echo $url
+}
+
+function set_backend_to {
+	rm -f $HOME/.balena
+	ln -s $(backend_to_location $1) $HOME/.balena
+	echo $1 > ~/.balena-backend
+	echo "{\"balenaUrl\": \"$(backend_to_url $1)\"}" | yq --yaml-output '.' > $HOME/.balenarc.yml
+
+}
+
+init
+
+case $1 in
+	"cloud") set_backend_to "cloud"
+	;;
+	"staging") set_backend_to "staging"
+	;;
+	"bob") set_backend_to "bob"
+	;;
+	"current") echo "Current backend: $(cat ~/.balena-backend)"; exit 0;
+	;;
+	*) echo "Available backends: cloud | staging | bob"; exit 1;
+esac
+
+echo "Setting backend to $1"
